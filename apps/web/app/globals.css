@@ -1,1 +1,6 @@
 @import "@workspace/ui/globals.css";
+
+::selection {
+  background-color: #ff5800;
+  color: white;
+}
