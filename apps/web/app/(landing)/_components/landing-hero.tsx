@@ -1,7 +1,9 @@
 import { Button } from "@workspace/ui/components/button"
 import Link from "next/link"
 import { AvatarGroup } from "@workspace/ui/components/avatar-group"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Rocket } from "lucide-react"
+import { HeroFormPreview } from "./hero-form-preview"
+import { IconBadge } from "@workspace/ui/components/icon-badge"
 
 const benefits = [
   "Up to 7x more responses than traditional surveys.",
@@ -19,7 +21,7 @@ const PEOPLE = [
 
 const LandingHero = () => {
   return (
-    <section className="mx-auto flex min-h-[calc(100vh-64px)] max-w-6xl items-center justify-between gap-20 px-6 sm:py-20">
+    <section className="mx-auto flex min-h-[calc(100vh-64px)] max-w-6xl items-start justify-between gap-20 px-6 py-20 sm:py-20">
       <div className="max-w-xl">
         <div className="group mb-3 hidden cursor-progress items-center gap-2 rounded-full border bg-background px-1 py-1.25 sm:inline-flex">
           <AvatarGroup avatars={PEOPLE} max={5} size={26} />
@@ -36,14 +38,11 @@ const LandingHero = () => {
           The simplest way to collect feedback.
         </h1>
 
-        <ul className="mt-6 space-y-2.5">
+        <ul className="mt-8 space-y-4">
           {benefits.map((benefit) => (
-            <li
-              key={benefit}
-              className="flex items-start gap-3 text-sm text-primary"
-            >
-              &#x2705;
-              <span>{benefit}</span>
+            <li key={benefit} className="flex items-center gap-4">
+              <IconBadge icon={Rocket} color="blue" size="xs" />
+              <span className="text-base text-foreground">{benefit}</span>
             </li>
           ))}
         </ul>
@@ -59,7 +58,7 @@ const LandingHero = () => {
         />
       </div>
 
-      <div className="hidden lg:block">Right section</div>
+      <HeroFormPreview className="hidden lg:block" />
     </section>
   )
 }

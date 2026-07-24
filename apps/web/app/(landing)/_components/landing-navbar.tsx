@@ -1,7 +1,7 @@
 import Logo from "@/components/logo"
 import Navigation from "./navigation"
-import CreateWorkspaceButton from "./create-workspace-button"
 import Link from "next/link"
+import { Button } from "@workspace/ui/components/button"
 
 const LandingNavbar = () => {
   return (
@@ -13,7 +13,11 @@ const LandingNavbar = () => {
 
         <Navigation />
 
-        <CreateWorkspaceButton />
+        <Button
+          nativeButton={false}
+          className="sm:text-md rounded-md p-2.5 sm:p-4.5"
+          render={<Link href="/register">Create workspace</Link>}
+        />
       </div>
     </header>
   )
