@@ -59,7 +59,7 @@ const ResultsSection = () => {
     <section className="py-15 sm:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mb-12 text-left sm:text-center">
-          <p className="text-md text-muted-foreground italic sm:text-lg">
+          <p className="text-lg text-muted-foreground italic sm:text-xl">
             Collecting user feedback is one of the most important things <br />{" "}
             you can do while building a product.
           </p>

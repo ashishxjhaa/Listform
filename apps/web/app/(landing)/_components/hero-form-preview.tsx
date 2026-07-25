@@ -1,392 +1,247 @@
 "use client"
 
 import * as React from "react"
-import { animate, motion, MotionConfig, useReducedMotion } from "motion/react"
-import { Check, Loader2 } from "lucide-react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
+import { Check, Loader } from "lucide-react"
 
 import { cn } from "@workspace/ui/lib/utils"
-import { Input } from "@workspace/ui/components/input"
-import { Textarea } from "@workspace/ui/components/textarea"
+import { Button } from "@workspace/ui/components/button"
 
-type ButtonState = "idle" | "submitting"
-type ViewKind = "form" | "success"
+/**
+ * HeroFormPreview
+ * ---------------
+ * Marketing mockup of a feedback form with a physics-based "paper card flip"
+ * transition between the form and its success state.
+ *
+ * Motion contract
+ *  - Submit → success flips the *entire* card down-and-away (rotateX negative,
+ *    lifting toward the viewer) while the success view enters from below with
+ *    the mirrored gesture.
+ *  - After a short hold, the success view flips *up*-and-away and the form
+ *    returns from above — the mirrored direction so the two transitions read
+ *    as distinct gestures, not a rerun of the same tween.
+ *  - The card container owns `perspective`; each face animates in 3D so the
+ *    fold feels physical instead of a cross-fade.
+ */
 
-interface ViewItem {
-  id: number
-  kind: ViewKind
-}
+type View = "form" | "success"
+type Direction = 1 | -1 // 1 = down (submit), -1 = up (return)
 
-const FIELDS = [
-  { id: "name", label: "Full name", value: "Ashish Jha" },
-  { id: "email", label: "Email address", value: "support@listform.in" },
-  { id: "company", label: "Company", value: "Listform Labs LLC" },
-] as const
+// ---------- timing --------------------------------------------------------
 
-const MESSAGE = "Type your message here"
+const FLIP_DURATION = 0.85
+const FLIP_EASE: [number, number, number, number] = [0.22, 0.61, 0.36, 1]
+const SUCCESS_HOLD_MS = 2200
+const CARD_HEIGHT = 460
 
-// Timing (ms / s). Tuned to read as a real request/response, not a toy.
-const SUBMIT_DELAY = 5 // simulated API round-trip, button reads "Sending…"
-const SUCCESS_HOLD = 2800 // how long the success state stays up
-const FOLD_DURATION = 0.9 // seconds, the bottom-fold transition itself
-const FOLD_EASE: [number, number, number, number] = [0.83, 0, 0.17, 1]
-
-// The card never grows or shrinks — every view is laid out to fit this box.
-const CONTENT_HEIGHT = 440
-
-const spring = {
-  type: "spring",
-  stiffness: 300,
-  damping: 28,
-  mass: 0.7,
-} as const
+// ---------- component -----------------------------------------------------
 
 export function HeroFormPreview({ className }: { className?: string }) {
-  const [items, setItems] = React.useState<ViewItem[]>([
-    { id: 0, kind: "form" },
-  ])
-  const [buttonState, setButtonState] = React.useState<ButtonState>("idle")
-  const nextId = React.useRef(1)
-
-  const startTransitionTo = React.useCallback((kind: ViewKind) => {
-    setItems((prev) =>
-      prev.length > 1 ? prev : [...prev, { id: nextId.current++, kind }]
-    )
-  }, [])
+  const [view, setView] = React.useState<View>("form")
+  const [direction, setDirection] = React.useState<Direction>(1)
+  const [submitting, setSubmitting] = React.useState(false)
 
   const handleSubmit = React.useCallback(() => {
-    setItems((prevItems) => {
-      if (prevItems.length > 1) return prevItems
-      setButtonState((current) => (current === "idle" ? "submitting" : current))
-      return prevItems
-    })
-  }, [])
+    if (submitting || view !== "form") return
+    setSubmitting(true)
+    setDirection(1)
+    // Instant — no artificial round-trip.
+    requestAnimationFrame(() => setView("success"))
+  }, [submitting, view])
 
-  const handleFoldDone = React.useCallback((settled: ViewItem) => {
-    setItems([settled])
-    if (settled.kind === "form") setButtonState("idle")
-  }, [])
-
-  // Only a real click starts this — nothing auto-submits on its own.
+  // Auto-return to the form after the success hold, from the opposite edge.
   React.useEffect(() => {
-    if (buttonState !== "submitting") return
-    const t = setTimeout(() => startTransitionTo("success"), SUBMIT_DELAY)
-    return () => clearTimeout(t)
-  }, [buttonState, startTransitionTo])
-
-  // After the success view has had its moment, fold back to the form.
-  React.useEffect(() => {
-    if (items.length !== 1 || items[0].kind !== "success") return
-    const t = setTimeout(() => startTransitionTo("form"), SUCCESS_HOLD)
-    return () => clearTimeout(t)
-  }, [items, startTransitionTo])
-
-  const renderContent = React.useCallback(
-    (kind: ViewKind) =>
-      kind === "form" ? (
-        <FormView
-          submitting={buttonState === "submitting"}
-          onSubmit={handleSubmit}
-        />
-      ) : (
-        <SuccessView />
-      ),
-    [buttonState, handleSubmit]
-  )
+    if (view !== "success") return
+    const t = window.setTimeout(() => {
+      setDirection(-1)
+      setView("form")
+      setSubmitting(false)
+    }, SUCCESS_HOLD_MS)
+    return () => window.clearTimeout(t)
+  }, [view])
 
   return (
-    <MotionConfig reducedMotion="user">
-      <motion.div
-        animate={{ y: [0, -8, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className={cn("w-[380px] sm:w-[400px]", className)}
+    <div className={cn("relative w-full max-w-[380px]", className)}>
+      <CornerBrackets />
+      <div
+        className="relative rounded-[10px] bg-card shadow-[0_30px_80px_-30px_rgba(24,15,10,0.35),0_10px_30px_-15px_rgba(24,15,10,0.18)] ring-1 ring-black/[0.04]"
+        style={{ perspective: 1400 }}
       >
-        {/* Decorative product mockup — not a real, submittable form. */}
-        <div
-          aria-hidden="true"
-          className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_1px_rgba(0,0,0,0.03),0_24px_48px_-20px_rgba(0,0,0,0.22)]"
-        >
-          <WindowChrome />
-          <FoldStage
-            items={items}
-            onDone={handleFoldDone}
-            renderContent={renderContent}
-          />
-        </div>
-      </motion.div>
-    </MotionConfig>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Organic bottom-fold transition
-//
-// The card is treated as a fixed-size box (CONTENT_HEIGHT, full width) that
-// never resizes. Two content layers sit stacked inside it — the view we're
-// leaving and the view we're arriving at — each clipped by an SVG path built
-// fresh every frame. The clip shapes always meet at a shared "waist" so the
-// silhouette reads as one continuous sheet pinching shut and reopening,
-// never two independent panels.
-// ---------------------------------------------------------------------------
-
-const LOBE_SAMPLES = 20
-const NECK_OVERLAP = 0.015 // fractional height; keeps the two lobes seamed with no gap
-
-function foldEdgeInset(
-  y: number,
-  waistY: number,
-  pinch: number,
-  spread: number,
-  maxInset: number
-) {
-  const dist = Math.min(Math.abs(y - waistY) / spread, 1)
-  const bump = Math.cos((dist * Math.PI) / 2) ** 2
-  return maxInset * pinch * bump
-}
-
-function buildLobePath(
-  yStart: number,
-  yEnd: number,
-  waistY: number,
-  pinch: number,
-  spread: number,
-  maxInset: number
-): string {
-  const points: [number, number][] = []
-  for (let i = 0; i <= LOBE_SAMPLES; i++) {
-    const y = yStart + ((yEnd - yStart) * i) / LOBE_SAMPLES
-    points.push([foldEdgeInset(y, waistY, pinch, spread, maxInset), y])
-  }
-  for (let i = LOBE_SAMPLES; i >= 0; i--) {
-    const y = yStart + ((yEnd - yStart) * i) / LOBE_SAMPLES
-    points.push([1 - foldEdgeInset(y, waistY, pinch, spread, maxInset), y])
-  }
-  return smoothClosedPath(points)
-}
-
-function smoothClosedPath(points: [number, number][]): string {
-  const n = points.length
-  if (n < 3) return ""
-  const mid = (a: [number, number], b: [number, number]): [number, number] => [
-    (a[0] + b[0]) / 2,
-    (a[1] + b[1]) / 2,
-  ]
-  const start = mid(points[n - 1], points[0])
-  let d = `M ${start[0].toFixed(4)} ${start[1].toFixed(4)} `
-  for (let i = 0; i < n; i++) {
-    const cur = points[i]
-    const next = points[(i + 1) % n]
-    const m = mid(cur, next)
-    d += `Q ${cur[0].toFixed(4)} ${cur[1].toFixed(4)} ${m[0].toFixed(4)} ${m[1].toFixed(4)} `
-  }
-  return d + "Z"
-}
-
-function computeFoldShapes(t: number) {
-  // waistY: the pinch point, travels bottom → top as t goes 0 → 1.
-  const waistY = 1 - t
-  // pinch: 0 at both ends, 1 at the midpoint — the "hourglass neck" moment.
-  const pinch = Math.min(1, 4 * t * (1 - t))
-  const spread = 0.22 + 0.24 * pinch
-  const maxInset = 0.46 // leaves a thin "flexible neck" rather than a hard zero
-  const oldYEnd = Math.min(1, waistY + NECK_OVERLAP)
-  const newYStart = Math.max(0, waistY - NECK_OVERLAP)
-  return {
-    oldD: buildLobePath(0, oldYEnd, waistY, pinch, spread, maxInset),
-    newD: buildLobePath(newYStart, 1, waistY, pinch, spread, maxInset),
-  }
-}
-
-function FoldStage({
-  items,
-  onDone,
-  renderContent,
-}: {
-  items: ViewItem[]
-  onDone: (settled: ViewItem) => void
-  renderContent: (kind: ViewKind) => React.ReactNode
-}) {
-  const oldPathRef = React.useRef<SVGPathElement>(null)
-  const newPathRef = React.useRef<SVGPathElement>(null)
-  const reduceMotion = useReducedMotion()
-  const uid = React.useId().replace(/[^a-zA-Z0-9]/g, "")
-  const transitioning = items.length > 1
-
-  React.useLayoutEffect(() => {
-    if (!transitioning) return
-    const incoming = items[1]
-
-    const initial = computeFoldShapes(0)
-    oldPathRef.current?.setAttribute("d", initial.oldD)
-    newPathRef.current?.setAttribute("d", initial.newD)
-
-    if (reduceMotion) {
-      const final = computeFoldShapes(1)
-      oldPathRef.current?.setAttribute("d", final.oldD)
-      newPathRef.current?.setAttribute("d", final.newD)
-      const t = setTimeout(() => onDone(incoming), 180)
-      return () => clearTimeout(t)
-    }
-
-    const controls = animate(0, 1, {
-      duration: FOLD_DURATION,
-      ease: FOLD_EASE,
-      onUpdate: (progress: number) => {
-        const shapes = computeFoldShapes(progress)
-        oldPathRef.current?.setAttribute("d", shapes.oldD)
-        newPathRef.current?.setAttribute("d", shapes.newD)
-      },
-      onComplete: () => onDone(incoming),
-    })
-
-    return () => controls.stop()
-  }, [items, transitioning, reduceMotion, onDone])
-
-  return (
-    <div
-      className="relative overflow-hidden"
-      style={{ height: CONTENT_HEIGHT }}
-    >
-      <svg
-        width="0"
-        height="0"
-        className="absolute"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <defs>
-          <clipPath id={`fold-old-${uid}`} clipPathUnits="objectBoundingBox">
-            <path ref={oldPathRef} d="M 0 0 L 1 0 L 1 1 L 0 1 Z" />
-          </clipPath>
-          <clipPath id={`fold-new-${uid}`} clipPathUnits="objectBoundingBox">
-            <path ref={newPathRef} d="M 0 0 L 1 0 L 1 1 L 0 1 Z" />
-          </clipPath>
-        </defs>
-      </svg>
-
-      {items.map((item, idx) => (
-        <div
-          key={item.id}
-          className="absolute inset-0"
-          style={
-            transitioning
-              ? {
-                  clipPath:
-                    idx === 0
-                      ? `url(#fold-old-${uid})`
-                      : `url(#fold-new-${uid})`,
-                }
-              : undefined
-          }
-        >
-          {renderContent(item.kind)}
-        </div>
-      ))}
+        <WindowChrome />
+        <FlipStage view={view} direction={direction}>
+          {view === "form" ? (
+            <FormView submitting={submitting} onSubmit={handleSubmit} />
+          ) : (
+            <SuccessView />
+          )}
+        </FlipStage>
+      </div>
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Chrome — untouched
-// ---------------------------------------------------------------------------
+// ---------- flip stage ----------------------------------------------------
+
+function FlipStage({
+  view,
+  direction,
+  children,
+}: {
+  view: View
+  direction: Direction
+  children: React.ReactNode
+}) {
+  const reduceMotion = useReducedMotion()
+
+  // Down submit (direction=1): outgoing tilts toward viewer & falls; incoming
+  // rises from below. Up return (direction=-1): mirrored.
+  const enter = {
+    rotateX: -35 * direction,
+    y: 80 * direction,
+    scale: 0.9,
+    opacity: 0,
+  }
+  const center = { rotateX: 0, y: 0, scale: 1, opacity: 1 }
+  const exit = {
+    rotateX: 35 * direction,
+    y: -80 * direction,
+    scale: 0.9,
+    opacity: 0,
+  }
+
+  const transition = reduceMotion
+    ? { duration: 0.15 }
+    : { duration: FLIP_DURATION, ease: FLIP_EASE }
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-b-[22px]"
+      style={{
+        height: CARD_HEIGHT,
+        transformStyle: "preserve-3d",
+      }}
+    >
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div
+          key={view}
+          initial={enter}
+          animate={center}
+          exit={exit}
+          transition={transition}
+          className="absolute inset-0 origin-center"
+          style={{
+            transformStyle: "preserve-3d",
+            backfaceVisibility: "hidden",
+            transformOrigin: direction === 1 ? "50% 0%" : "50% 100%",
+          }}
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ---------- decorative pieces --------------------------------------------
+
+function CornerBrackets() {
+  const base =
+    "pointer-events-none absolute h-6 w-6 z-10 [border-color:#ff5800]"
+  return (
+    <>
+      <span
+        className={cn(
+          base,
+          "-top-[6px] -left-[6px] rounded-tl-[8px] border-t-2 border-l-2"
+        )}
+      />
+      <span
+        className={cn(
+          base,
+          "-top-[6px] -right-[6px] rounded-tr-[8px] border-t-2 border-r-2"
+        )}
+      />
+      <span
+        className={cn(
+          base,
+          "-bottom-[6px] -left-[6px] rounded-bl-[8px] border-b-2 border-l-2"
+        )}
+      />
+      <span
+        className={cn(
+          base,
+          "-right-[6px] -bottom-[6px] rounded-br-[8px] border-r-2 border-b-2"
+        )}
+      />
+    </>
+  )
+}
 
 function WindowChrome() {
   return (
-    <div className="flex items-center gap-3 border-b border-border/70 bg-muted/40 px-4 py-3">
-      <div className="group flex shrink-0 items-center gap-[7px]">
-        <TrafficLight
-          fill="#ff5f57"
-          stroke="#e0443e"
-          icon="close"
-          label="Close"
-        />
-        <TrafficLight
-          fill="#ffbd2e"
-          stroke="#dea123"
-          icon="minimize"
-          label="Minimize"
-        />
-        <TrafficLight
-          fill="#28c840"
-          stroke="#1aab29"
-          icon="maximize"
-          label="Maximize"
-        />
+    <div className="relative flex h-11 items-center rounded-t-[10px] border-b border-black/[0.06] bg-[oklch(0.97_0.006_85)] px-4">
+      <div className="group/lights flex items-center gap-[7px]">
+        <TrafficLight color="#ff5f57" ring="#e14640" glyph="close" />
+        <TrafficLight color="#febc2e" ring="#dfa123" glyph="minimize" />
+        <TrafficLight color="#57c02c" ring="#2ea043" glyph="maximize" />
       </div>
-      <span className="flex-1 truncate text-center text-[11px] font-medium text-muted-foreground/60">
-        feedback.listform.in
-      </span>
-      <div className="w-[50px] shrink-0" />
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span className="text-[11px] font-medium tracking-tight text-foreground/70">
+          feedback.listform.in
+        </span>
+      </div>
     </div>
   )
 }
 
 function TrafficLight({
-  fill,
-  stroke,
-  icon,
-  label,
+  color,
+  ring,
+  glyph,
 }: {
-  fill: string
-  stroke: string
-  icon: "close" | "minimize" | "maximize"
-  label: string
+  color: string
+  ring: string
+  glyph: "close" | "minimize" | "maximize"
 }) {
   return (
     <span
-      title={label}
-      className="relative flex size-3 items-center justify-center rounded-full"
-      style={{
-        backgroundColor: fill,
-        boxShadow: `inset 0 0 0 0.5px ${stroke}`,
-      }}
+      className="relative flex h-[13px] w-[13px] items-center justify-center rounded-full"
+      style={{ backgroundColor: color, boxShadow: `inset 0 0 0 0.5px ${ring}` }}
     >
       <svg
-        viewBox="0 0 8 8"
-        className="size-[7px] text-black/50 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+        viewBox="0 0 10 10"
+        className="pointer-events-none h-[8px] w-[8px] opacity-0 transition-opacity duration-150 group-hover/lights:opacity-100"
+        style={{ color: "rgba(0,0,0,0.65)" }}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
       >
-        {icon === "close" && (
-          <path
-            d="M1.5 1.5L6.5 6.5M6.5 1.5L1.5 6.5"
-            stroke="currentColor"
-            strokeWidth="1.1"
-            strokeLinecap="round"
-          />
+        {glyph === "close" && (
+          <>
+            <path d="M3 3l4 4" />
+            <path d="M7 3l-4 4" />
+          </>
         )}
-        {icon === "minimize" && (
-          <path
-            d="M1.3 4H6.7"
-            stroke="currentColor"
-            strokeWidth="1.1"
-            strokeLinecap="round"
-          />
-        )}
-        {icon === "maximize" && (
-          <path
-            d="M1.3 5.3L3.4 3.2M3.4 3.2H1.7M3.4 3.2V4.9M6.7 2.7L4.6 4.8M4.6 4.8H6.3M4.6 4.8V3.1"
-            stroke="currentColor"
-            strokeWidth="1.1"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+        {glyph === "minimize" && <path d="M2.5 5h5" />}
+        {glyph === "maximize" && (
+          <>
+            <path d="M3.4 6.6V3.4h3.2" />
+            <path d="M6.6 3.4v3.2H3.4" />
+          </>
         )}
       </svg>
     </span>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Form view
-// ---------------------------------------------------------------------------
+// ---------- form view -----------------------------------------------------
 
-const fieldVariants = {
-  hidden: { opacity: 0, y: 8, scale: 0.97 },
-  show: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { ...spring, delay: 0.05 + i * 0.045 },
-  }),
-}
+const FIELDS = [
+  { id: "name", label: "Full name", value: "Ashish Jha" },
+  { id: "email", label: "Email address", value: "support@listform.in" },
+  { id: "company", label: "Company", value: "Listform LLC" },
+] as const
 
 function FormView({
   submitting,
@@ -396,111 +251,116 @@ function FormView({
   onSubmit: () => void
 }) {
   return (
-    <div className="flex h-full flex-col justify-center gap-3.5 px-6">
-      <motion.div
-        custom={0}
-        variants={fieldVariants}
-        initial="hidden"
-        animate="show"
-      >
-        <h3 className="text-[13px] leading-snug font-semibold text-foreground">
-          Please share your questions with us
-        </h3>
-      </motion.div>
+    <div className="flex h-full flex-col gap-4 px-6 pt-6 pb-6">
+      <h3 className="text-[15px] font-semibold tracking-tight text-foreground">
+        Please share your questions with us
+      </h3>
 
-      {FIELDS.map((field, i) => (
-        <motion.div
-          key={field.id}
-          custom={i + 1}
-          variants={fieldVariants}
-          initial="hidden"
-          animate="show"
-          className="space-y-1.5"
-        >
-          <span className="text-xs font-medium text-foreground/70">
-            {field.label}
-          </span>
-          <PreviewField value={field.value} />
-        </motion.div>
-      ))}
+      <div className="flex flex-col gap-3">
+        {FIELDS.map((f) => (
+          <PreviewField key={f.id} label={f.label} value={f.value} />
+        ))}
+        <PreviewField
+          label="Message"
+          value="Type your message here"
+          as="textarea"
+          placeholder
+        />
+      </div>
 
-      <motion.div
-        custom={FIELDS.length + 1}
-        variants={fieldVariants}
-        initial="hidden"
-        animate="show"
-        className="space-y-1.5"
+      <Button
+        onClick={onSubmit}
+        disabled={submitting}
+        className="sm:text-md mt-4.5 cursor-pointer rounded-md p-2.5 sm:p-4.5"
       >
-        <span className="text-xs font-medium text-foreground/70">Message</span>
-        <PreviewField as="textarea" value={MESSAGE} />
-      </motion.div>
-
-      <motion.div
-        custom={FIELDS.length + 2}
-        variants={fieldVariants}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.button
-          type="button"
-          onClick={onSubmit}
-          disabled={submitting}
-          whileTap={submitting ? undefined : { scale: 0.97 }}
-          className={cn(
-            "flex h-8 w-full items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors duration-300",
-            submitting
-              ? "cursor-not-allowed bg-primary/35 text-primary-foreground/70"
-              : "cursor-pointer bg-primary text-primary-foreground hover:bg-primary/80"
-          )}
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-              Sending…
-            </>
-          ) : (
-            "Submit"
-          )}
-        </motion.button>
-      </motion.div>
+        {submitting ? (
+          <>
+            <Loader className="size-3.5 animate-spin" />
+            Sending…
+          </>
+        ) : (
+          "Submit"
+        )}
+      </Button>
     </div>
   )
 }
 
 function PreviewField({
+  label,
   value,
   as = "input",
+  placeholder = false,
 }: {
+  label: string
   value: string
   as?: "input" | "textarea"
+  placeholder?: boolean
 }) {
   const shared = {
-    value,
     readOnly: true,
-    tabIndex: -1,
+    tabIndex: -1 as const,
     onMouseDown: (e: React.MouseEvent) => e.preventDefault(),
-    className: "cursor-not-allowed select-none",
   }
 
-  return as === "textarea" ? (
-    <Textarea rows={2} {...shared} />
-  ) : (
-    <Input {...shared} />
+  const fieldClass = cn(
+    "w-full rounded-lg border border-input bg-background/60 px-3 text-[13px] text-foreground select-none",
+    "hover:cursor-not-allowed focus:outline-none focus-visible:outline-none",
+    placeholder && "text-muted-foreground/60 italic"
+  )
+
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[11px] font-medium tracking-tight text-muted-foreground">
+        {label}
+      </span>
+      {as === "textarea" ? (
+        <textarea
+          {...shared}
+          value={value}
+          rows={2}
+          className={cn(fieldClass, "resize-none py-2 leading-snug")}
+          style={{ resize: "none" }}
+        />
+      ) : (
+        <input
+          {...shared}
+          value={value}
+          className={cn(fieldClass, "h-9 italic")}
+        />
+      )}
+    </label>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Success view — split top/bottom, green, ring pulses continuously
-// ---------------------------------------------------------------------------
+// ---------- success view --------------------------------------------------
+
+function SuccessView() {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex flex-1 items-center justify-center bg-[oklch(0.96_0.05_150)]">
+        <SuccessIcon />
+      </div>
+      <div className="flex flex-col items-center justify-center gap-1 px-6 py-8 text-center">
+        <p className="text-[14px] font-semibold tracking-tight text-foreground">
+          Message sent
+        </p>
+        <p className="text-[12px] text-muted-foreground">
+          We usually reply within a few hours.
+        </p>
+      </div>
+    </div>
+  )
+}
 
 function SuccessIcon() {
   return (
-    <div className="relative flex size-14 items-center justify-center">
+    <div className="relative flex size-16 items-center justify-center">
       {[0, 1].map((i) => (
         <motion.span
           key={i}
-          className="absolute inset-0 rounded-full bg-emerald-400"
-          initial={{ opacity: 0.35, scale: 1 }}
+          className="absolute inset-0 rounded-full bg-emerald-400/50"
+          initial={{ opacity: 0.45, scale: 1 }}
           animate={{ opacity: 0, scale: 2.2 }}
           transition={{
             duration: 1.8,
@@ -511,29 +371,23 @@ function SuccessIcon() {
         />
       ))}
       <motion.div
-        initial={{ scale: 0, rotate: -20 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ ...spring, delay: 0.05 }}
-        className="relative flex size-14 items-center justify-center rounded-full bg-emerald-500 shadow-[0_2px_14px_rgba(16,185,129,0.4)]"
+        initial={{ scale: 0 }}
+        animate={{ scale: [0, 1.15, 0.95, 1.06, 1] }}
+        transition={{
+          duration: 0.9,
+          times: [0, 0.35, 0.55, 0.78, 1],
+          ease: "easeOut",
+        }}
+        className="relative flex size-14 items-center justify-center rounded-full bg-emerald-500 shadow-[0_6px_20px_-6px_rgba(16,185,129,0.55)]"
       >
-        <Check className="size-6 text-white" strokeWidth={2.75} />
+        <motion.span
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.28, ease: "easeOut" }}
+        >
+          <Check className="size-7 text-white" strokeWidth={3} />
+        </motion.span>
       </motion.div>
-    </div>
-  )
-}
-
-function SuccessView() {
-  return (
-    <div className="grid h-full grid-rows-2">
-      <div className="flex items-center justify-center bg-emerald-500/10">
-        <SuccessIcon />
-      </div>
-      <div className="flex flex-col items-center justify-center gap-1 px-6 text-center">
-        <p className="text-sm font-semibold text-foreground">Message sent</p>
-        <p className="text-xs text-muted-foreground">
-          We usually reply within a few hours.
-        </p>
-      </div>
     </div>
   )
 }

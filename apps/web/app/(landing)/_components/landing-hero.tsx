@@ -23,14 +23,10 @@ const LandingHero = () => {
   return (
     <section className="mx-auto flex min-h-[calc(100vh-64px)] max-w-6xl items-start justify-between gap-20 px-6 py-20 sm:py-20">
       <div className="max-w-xl">
-        <div className="group mb-3 hidden cursor-progress items-center gap-2 rounded-full border bg-background px-1 py-1.25 sm:inline-flex">
+        <div className="mb-3 hidden items-center gap-2 rounded-full border bg-background px-1 py-1.25 sm:inline-flex">
           <AvatarGroup avatars={PEOPLE} max={5} size={26} />
           <span className="flex items-center gap-1 text-sm font-medium tracking-tighter text-muted-foreground">
-            Trusted by 800+ founders{" "}
-            <ChevronRight
-              size={18}
-              className="transition-all group-hover:-translate-x-0.5"
-            />
+            Trusted by 800+ founders <ChevronRight size={18} />
           </span>
         </div>
 
@@ -41,7 +37,7 @@ const LandingHero = () => {
         <ul className="mt-8 space-y-4">
           {benefits.map((benefit) => (
             <li key={benefit} className="flex items-center gap-4">
-              <IconBadge icon={Rocket} color="blue" size="xs" />
+              <IconBadge icon={Rocket} color="green" size="xs" />
               <span className="text-base text-foreground">{benefit}</span>
             </li>
           ))}
