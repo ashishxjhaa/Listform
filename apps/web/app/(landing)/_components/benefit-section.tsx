@@ -67,11 +67,11 @@ export function BenefitSection() {
           </p>
         </div>
 
-        <div className="mt-16 grid divide-x divide-dashed divide-[#ff5800] md:grid-cols-2 md:divide-x lg:grid-cols-3">
+        <div className="mt-13 grid border-x border-border md:grid-cols-2 lg:grid-cols-3">
           {results.map(({ icon, color, stat, description }) => (
             <div
               key={stat}
-              className="flex flex-col items-start gap-4 border-r border-b border-dashed border-[#ff5800] px-6 py-8 first:pt-0 last:border-r-0 md:px-8 lg:last:border-r"
+              className="flex flex-col items-start gap-4 border-r border-b border-border px-6 py-8 first:pt-0 last:border-r-0 md:px-8 lg:last:border-r"
             >
               <IconBadge icon={icon} color={color} size="sm" />
               <div>
