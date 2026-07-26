@@ -8,6 +8,7 @@ import { BenefitSection } from "./_components/benefit-section"
 import { AudienceSection } from "./_components/audience-section"
 import { PricingSection } from "./_components/pricing-section"
 import { LandingCTA } from "./_components/landing-cta"
+import { FooterSection } from "./_components/footer-section"
 
 export default function Page() {
   return (
@@ -29,6 +30,7 @@ export default function Page() {
       <Divider />
       <PricingSection />
       <LandingCTA />
+      <FooterSection />
     </>
   )
 }

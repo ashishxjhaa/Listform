@@ -1,4 +1,5 @@
 import { Button } from "@workspace/ui/components/button"
+import Link from "next/link"
 
 export function LandingCTA() {
   return (
@@ -8,9 +9,11 @@ export function LandingCTA() {
           Feedback Flywheel.
         </h2>
 
-        <Button size="lg" className="mt-4 cursor-pointer sm:mt-8">
-          Quick start
-        </Button>
+        <Button
+          nativeButton={false}
+          className="mt-8 px-6 py-5 text-base"
+          render={<Link href="/login">Quick start</Link>}
+        />
       </div>
     </section>
   )
