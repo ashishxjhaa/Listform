@@ -37,7 +37,7 @@ const FeaturesSection = () => {
     <section className="w-full py-15 sm:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <h2 className="max-w-3xl text-3xl font-bold tracking-tight text-primary/80 md:text-5xl">
-          Every click has something to say.
+          Every click has something to say
         </h2>
 
         <div className="mt-16 grid gap-8 sm:gap-12 md:grid-cols-2">

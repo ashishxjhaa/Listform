@@ -52,7 +52,19 @@ const Navigation = () => {
 
         {/* Pricing */}
         <NavigationMenuItem>
-          <NavigationMenuLink render={<Link href="#pricing">Pricing</Link>} />
+          <NavigationMenuLink
+            render={
+              <button
+                onClick={() =>
+                  document.getElementById("pricing")?.scrollIntoView({
+                    behavior: "smooth",
+                  })
+                }
+              >
+                Pricing
+              </button>
+            }
+          />
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>

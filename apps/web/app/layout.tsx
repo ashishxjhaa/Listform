@@ -53,7 +53,11 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", "font-sans", fontSans.variable)}
+      className={cn(
+        "scroll-smooth antialiased",
+        "font-sans",
+        fontSans.variable
+      )}
     >
       <body>{children}</body>
     </html>

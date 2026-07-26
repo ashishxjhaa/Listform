@@ -22,10 +22,10 @@ const plans = [
 
 export function PricingSection() {
   return (
-    <section className="w-full py-15 sm:py-24">
+    <section id="pricing" className="w-full py-15 sm:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <h2 className="text-3xl font-bold tracking-tight text-primary/80 sm:text-center sm:text-5xl">
-          Simple, honest pricing.
+          Simple, transparent pricing
         </h2>
         <p className="text-md mx-auto mt-4 max-w-lg text-muted-foreground italic sm:text-lg">
           One plan. Everything included. No tiers to compare, no features locked
