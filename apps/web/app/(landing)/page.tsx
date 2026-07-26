@@ -6,6 +6,7 @@ import ResultsSection from "./_components/results-section"
 import FeaturesSection from "./_components/features-section"
 import { BenefitSection } from "./_components/benefit-section"
 import { AudienceSection } from "./_components/audience-section"
+import { PricingSection } from "./_components/pricing-section"
 
 export default function Page() {
   return (
@@ -24,6 +25,8 @@ export default function Page() {
       </DottedBackground>
       <Divider />
       <AudienceSection />
+      <Divider />
+      <PricingSection />
     </>
   )
 }

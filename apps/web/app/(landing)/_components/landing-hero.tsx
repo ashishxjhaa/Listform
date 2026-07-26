@@ -21,7 +21,7 @@ const PEOPLE = [
 
 const LandingHero = () => {
   return (
-    <section className="mx-auto flex min-h-[calc(100vh-64px)] max-w-6xl items-start justify-between gap-20 px-6 py-20">
+    <section className="mx-auto flex max-w-6xl items-start justify-between gap-20 px-6 py-20">
       <div className="max-w-xl">
         <div className="mb-3 hidden items-center gap-2 rounded-full border bg-background px-1 py-1.25 sm:inline-flex">
           <AvatarGroup avatars={PEOPLE} max={5} size={26} />
